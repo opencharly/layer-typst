@@ -30,22 +30,20 @@ typst:
             alpine:
                 package:
                     - xz
+        var:
+            # Pinned Typst release tag — a concrete tag, NOT `latest`, and the reason is
+            # correctness rather than taste. The download verb content-addresses its cache by
+            # sha256 OF THE URL. With `latest` the URL is constant while the artifact behind it
+            # changes, so the cache would keep serving the first tarball it ever fetched.
+            TYPST_VERSION: v0.15.1
         plan:
-            - run: |
-                command=VER=$(curl -fsSL https://api.github.com/repos/typst/typst/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-                curl -fsSL "https://github.com/typst/typst/releases/download/v${VER}/typst-${BUILD_ARCH}-unknown-linux-musl.tar.xz" -o /tmp/typst.tar.xz
-                tar -xJf /tmp/typst.tar.xz -C /tmp/
-                find /tmp -name "typst" -type f -executable | head -1 | xargs -I{} mv {} /usr/local/bin/typst
-                chmod +x /usr/local/bin/typst
-                rm -rf /tmp/typst.tar.xz /tmp/typst-*
+            - run: install the pinned Typst release tarball (var TYPST_VERSION) — the declarative download verb keeps the content-addressed /tmp/downloads cache, the atomic .part to mv rename, and the stage-user-correct cache mount
+              download: "https://github.com/typst/typst/releases/download/${TYPST_VERSION}/typst-${BUILD_ARCH}-unknown-linux-musl.tar.xz"
+              extract: tar.xz
+              strip_components: 1
+              to: /usr/local/bin
+              unless_exists: /usr/local/bin/typst
               run_as: root
-              command: |
-                VER=$(curl -fsSL https://api.github.com/repos/typst/typst/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
-                curl -fsSL "https://github.com/typst/typst/releases/download/v${VER}/typst-${BUILD_ARCH}-unknown-linux-musl.tar.xz" -o /tmp/typst.tar.xz
-                tar -xJf /tmp/typst.tar.xz -C /tmp/
-                find /tmp -name "typst" -type f -executable | head -1 | xargs -I{} mv {} /usr/local/bin/typst
-                chmod +x /usr/local/bin/typst
-                rm -rf /tmp/typst.tar.xz /tmp/typst-*
             - check: the typst binary is installed at /usr/local/bin/typst
               file:
                 file: /usr/local/bin/typst
